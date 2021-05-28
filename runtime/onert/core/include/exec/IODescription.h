@@ -19,6 +19,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <semaphore.h>
 
 #include "ir/OperandInfo.h"
 #include "ir/Index.h"
@@ -61,9 +62,31 @@ struct OutputDesc
 struct IODescription
 {
   std::vector<std::unique_ptr<InputDesc>> inputs;
+  std::vector<sem_t *> inputs_sem;
   std::vector<std::unique_ptr<OutputDesc>> outputs;
   // Contains shape of input set by nnfw_set_input_tensorinfo(..)
   std::unordered_map<ir::IOIndex, ir::Shape> dynamic_input_shapes;
+  ~IODescription()
+  {
+    for (uint32_t i = 0; i < inputs.size(); i++) {
+      auto p = inputs.at(i).release();
+      if (p) {
+        free((void *)p->buffer);
+        delete p;
+      }
+    }
+    for (uint32_t i = 0; i < inputs_sem.size(); i++) {
+      auto p = inputs_sem.at(i);
+      if (p) free(p);
+    }
+    for (uint32_t i = 0; i < outputs.size(); i++) {
+      auto p = outputs.at(i).release();
+      if (p) {
+        free(p->buffer);
+        delete p;
+      }
+    }
+  }
 };
 
 } // namespace exec

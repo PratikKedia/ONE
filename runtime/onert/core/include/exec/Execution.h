@@ -24,8 +24,11 @@
 #include "ir/Layout.h"
 #include "exec/IExecutor.h"
 #include "IODescription.h"
+#include "../../api/src/nnfw_api_internal.h"
 
 #include <thread>
+#include <deque>
+#include <semaphore.h>
 
 namespace onert
 {
@@ -70,6 +73,52 @@ public:
    */
   void setInput(const ir::IOIndex &index, const void *buffer, size_t length,
                 ir::Layout layout = ir::Layout::NHWC);
+
+  /**
+   * @brief     Create New IODescription instance for new inputs outputs
+   * @param[in] index   instance count number
+   */
+  void createNewAsyncDesc(uint32_t count = 0);
+
+  /**
+   * @brief     Set async input data's information
+   * @param[in] index   Input index
+   * @param[in] buffer  Input data's buffer pointer
+   * @param[in] length  Input data's length
+   * @param[in] layout  Input data's data format
+   */
+  void executeAsyncInput(const ir::IOIndex &index, const void *buffer, size_t length,
+                         ir::Layout layout = ir::Layout::NHWC);
+
+  /**
+   * @brief     Set async output data's information
+   * @param[in] index   Output index
+   * @param[in] buffer  Output data's buffer pointer
+   * @param[in] length  Output data's length
+   * @param[in] layout  Output data's data format
+   */
+  void executeAsyncOutput(const ir::IOIndex &index, void *buffer, size_t length,
+                      ir::Layout layout = ir::Layout::NHWC);
+
+  /**
+   * @brief  Async execution
+   * @note   It should be called after setting input and output buffer
+   */
+  void AsyncExecute();
+
+  /**
+   * @brief  Wait semaphores of inputs to run inference
+   */
+  void ioDescSemWait();
+
+  std::vector<std::tuple<std::shared_ptr<onert::exec::Execution>, onert::ir::IOIndex ,onert::ir::IOIndex>> getNextExes() { return next_exes; }
+  void pushNextExe(std::shared_ptr<onert::exec::Execution> next, onert::ir::IOIndex o_index, onert::ir::IOIndex i_index) { next_exes.push_back({next, o_index, i_index}); }
+  std::deque<std::pair<IODescription *, uint32_t>> *getAsyncIoDescs() { return &_async_io_descs; }
+  std::deque<std::vector<void *>> *getAsyncResults() { return &_async_results; }
+
+  void setFinish();
+  bool isEmptyQueue();
+
   /**
    * @brief     Set input data's information, especially to specify unknown dimensions on model
    * build time.
@@ -143,6 +192,15 @@ public:
   ir::Shape getInputShape(ir::IOIndex ind) const;
   ir::Shape getOutputShape(ir::IOIndex ind) const;
 
+  //
+  // Experimental API
+  //
+  void asyncIoDescSemWait();
+  void asyncIoDescSemPost();
+  void runInference();
+  bool stopWait(void) const;
+  void sholudStop();
+
 private:
   const std::unique_ptr<IExecutor> &primary_executor() const
   {
@@ -153,8 +211,13 @@ private:
 private:
   const std::shared_ptr<ExecutorMap> _executors;
   IODescription _io_desc;
+  std::deque<std::pair<IODescription *, uint32_t>> _async_io_descs;
+  sem_t _async_io_descs_sem;
+  std::deque<std::vector<void *>> _async_results;
+  std::vector<std::tuple<std::shared_ptr<onert::exec::Execution>, onert::ir::IOIndex, onert::ir::IOIndex>> next_exes;
   std::unique_ptr<std::thread> _exec_thread;
   bool finished{false};
+  bool stop_wait{false};
 };
 
 } // namespace exec

@@ -120,5 +120,7 @@ NNFW_STATUS nnfw_set_backends_per_operation(nnfw_session *session, const char *b
  * @return NNFW_STATUS_NO_ERROR if successful
  */
 NNFW_STATUS nnfw_prepare_pipeline(nnfw_session *session, const char *map_file_path = nullptr);
+NNFW_STATUS nnfw_push_pipeline_input(nnfw_session *session, std::vector<void *> *inputs, std::vector<uint32_t> *lengths);
+NNFW_STATUS nnfw_pop_pipeline_output(nnfw_session *session, std::vector<void *> *outputs);
 
 #endif // __NNFW_EXPERIMENTAL_H__
