@@ -19,6 +19,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <semaphore.h>
 
 #include "ir/OperandInfo.h"
 #include "ir/Index.h"
@@ -61,6 +62,7 @@ struct OutputDesc
 struct IODescription
 {
   std::vector<std::unique_ptr<InputDesc>> inputs;
+  std::vector<sem_t *> inputs_sem;
   std::vector<std::unique_ptr<OutputDesc>> outputs;
   // Contains shape of input set by nnfw_set_input_tensorinfo(..)
   std::unordered_map<ir::IOIndex, ir::Shape> dynamic_input_shapes;
