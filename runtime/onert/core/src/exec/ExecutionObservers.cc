@@ -25,8 +25,32 @@
 #include "ir/Operation.h"
 #include "util/EventWriter.h"
 
+// POSIX standard libraries
+#include <sys/time.h>
+#include <sys/resource.h>
+
+// C++ standard libraries
+#include <chrono>
+
+
+
+
+
 namespace
 {
+
+// std::string timestamp(void)
+// {
+//   auto now = std::chrono::steady_clock::now();
+//   return std::to_string(
+//     std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+// }
+
+std::int64_t timestamp(void)
+{
+  auto now = std::chrono::steady_clock::now();
+  return std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+}
 
 void setUserData(const onert::ir::Graph &g, const onert::ir::Operation *op,
                  decltype(EventCollector::Event::userData) &data)
@@ -167,6 +191,63 @@ void TracingObserver::handleSubgraphEnd(ir::SubgraphIndex subg_ind)
   _collector.onEvent(
     EventCollector::SubgEvent{_tracing_ctx, EventCollector::Edge::END, subg_ind.value()});
 }
+
+
+SimpleObserver::SimpleObserver(const ir::Graph &graph) 
+: _graph{graph}
+{
+}
+
+SimpleObserver::~SimpleObserver()
+{
+}
+
+void SimpleObserver::handleSubgraphBegin(ir::SubgraphIndex subg_ind)
+{
+  auto subgind = subg_ind.value();
+  backendmap[subgind] = "cpu";
+}
+
+void SimpleObserver::handleJobBegin(IExecutor *, ir::SubgraphIndex subg_ind,
+                                     ir::OperationIndex op_ind, const backend::Backend *backend)
+{
+  const auto &op = _graph.operations().at(op_ind);
+
+  auto subgind = subg_ind.value();
+  std::string backend_id = backend->config()->id();
+  backendmap[subgind] = backend_id;
+  
+  auto ts = timestamp();
+  optimemap.insert(std::pair<std::uint32_t, std::int64_t>(op_ind.value(), ts));
+  opnamemap.insert(std::pair<std::uint32_t, std::string>(op_ind.value(), op.name()));
+}
+
+void SimpleObserver::handleJobEnd(IExecutor *, ir::SubgraphIndex subg_ind,
+                                   ir::OperationIndex op_ind, const backend::Backend *backend)
+{
+  std::string backend_id = backend->config()->id();
+  auto subgind = subg_ind.value();
+  backendmap[subgind] = backend_id;
+
+  auto ts = timestamp();
+  optimemap[op_ind.value()] = ts - optimemap[op_ind.value()];
+
+}
+
+void SimpleObserver::handleSubgraphEnd(ir::SubgraphIndex subg_ind)
+{
+  auto subgind = subg_ind.value();
+  backendmap[subgind] = "cpu";
+
+  for(auto itr = opnamemap.begin(); itr != opnamemap.end(); ++itr){
+    std::cout << itr->first <<" " << itr->second << "\n";
+  }
+  for(auto itr = optimemap.begin(); itr != optimemap.end(); ++itr){
+    std::cout << itr->first <<" " << itr->second << "\n";
+  }
+
+}
+
 
 } // namespace exec
 

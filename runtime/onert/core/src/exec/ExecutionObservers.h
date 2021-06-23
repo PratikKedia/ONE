@@ -29,6 +29,8 @@
 #include "util/TracingCtx.h"
 #include "util/EventWriter.h"
 
+#include <map>
+
 namespace onert
 {
 namespace exec
@@ -90,6 +92,31 @@ private:
   EventWriter *_event_writer;
   const util::TracingCtx *_tracing_ctx;
 };
+
+
+//ADDED CODE
+class SimpleObserver : public IExecutionObserver
+{
+public:
+  SimpleObserver(const ir::Graph &graph);
+  ~SimpleObserver();
+  void handleSubgraphBegin(ir::SubgraphIndex) override;
+  void handleJobBegin(IExecutor *, ir::SubgraphIndex, ir::OperationIndex,
+                      const backend::Backend *) override;
+  void handleJobEnd(IExecutor *, ir::SubgraphIndex, ir::OperationIndex,
+                    const backend::Backend *) override;
+  void handleSubgraphEnd(ir::SubgraphIndex) override;
+
+private:
+  // std::unique_ptr<std::map<std::uint32_t, std::int64_t>> optimemap;
+  std::map<std::uint32_t, std::int64_t> optimemap;
+  std::map<std::uint32_t, std::string> opnamemap;
+  std::map<std::uint32_t, std::string> backendmap;
+
+  const ir::Graph &_graph;
+};
+
+
 
 } // namespace exec
 } // namespace onert
