@@ -422,7 +422,8 @@ ExecutorFactory::createLinearExecutor(std::unique_ptr<compiler::LoweredGraph> lo
     exec->addObserver(std::move(ctp));
   }
 
-  std::unique_ptr<exec::IExecutionObserver> stp = std::make_unique<exec::SimpleObserver>(exec->graph());
+  // std::unique_ptr<exec::IExecutionObserver> stp = std::make_unique<exec::SimpleObserver>(exec->graph());
+  std::unique_ptr<exec::IExecutionObserver> stp = std::make_unique<exec::SimpleObserver>();
   exec->addObserver(std::move(stp));
 
   return exec;

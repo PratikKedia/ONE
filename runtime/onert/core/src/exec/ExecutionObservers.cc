@@ -193,8 +193,8 @@ void TracingObserver::handleSubgraphEnd(ir::SubgraphIndex subg_ind)
 }
 
 
-SimpleObserver::SimpleObserver(const ir::Graph &graph) 
-: _graph{graph}
+SimpleObserver::SimpleObserver()
+: _json_out{new JsonWriter("simple")}
 {
 }
 
@@ -204,30 +204,36 @@ SimpleObserver::~SimpleObserver()
 
 void SimpleObserver::handleSubgraphBegin(ir::SubgraphIndex subg_ind)
 {
-  auto subgind = subg_ind.value();
-  backendmap[subgind] = "cpu";
+  // auto subgind = subg_ind.value();
+  // backendmap[subgind] = "cpu";
+  assert(subg_ind.value() == 0);
 }
 
 void SimpleObserver::handleJobBegin(IExecutor *, ir::SubgraphIndex subg_ind,
                                      ir::OperationIndex op_ind, const backend::Backend *backend)
 {
-  const auto &op = _graph.operations().at(op_ind);
+  // const auto &op = _graph.operations().at(op_ind);
 
-  auto subgind = subg_ind.value();
-  std::string backend_id = backend->config()->id();
-  backendmap[subgind] = backend_id;
+  // auto subgind = subg_ind.value();
+  // std::string backend_id = backend->config()->id();
+  // backendmap[subgind] = backend_id;
+  assert(subg_ind.value() == 0);
+  assert(backend->config()->id() == "cpu");
   
   auto ts = timestamp();
   optimemap.insert(std::pair<std::uint32_t, std::int64_t>(op_ind.value(), ts));
-  opnamemap.insert(std::pair<std::uint32_t, std::string>(op_ind.value(), op.name()));
+  // opnamemap.insert(std::pair<std::uint32_t, std::string>(op_ind.value(), op.name()));
 }
 
 void SimpleObserver::handleJobEnd(IExecutor *, ir::SubgraphIndex subg_ind,
                                    ir::OperationIndex op_ind, const backend::Backend *backend)
 {
-  std::string backend_id = backend->config()->id();
-  auto subgind = subg_ind.value();
-  backendmap[subgind] = backend_id;
+  // std::string backend_id = backend->config()->id();
+  // auto subgind = subg_ind.value();
+  // backendmap[subgind] = backend_id;
+
+  assert(subg_ind.value() == 0);
+  assert(backend->config()->id() == "cpu");
 
   auto ts = timestamp();
   optimemap[op_ind.value()] = ts - optimemap[op_ind.value()];
@@ -236,15 +242,19 @@ void SimpleObserver::handleJobEnd(IExecutor *, ir::SubgraphIndex subg_ind,
 
 void SimpleObserver::handleSubgraphEnd(ir::SubgraphIndex subg_ind)
 {
-  auto subgind = subg_ind.value();
-  backendmap[subgind] = "cpu";
+  // auto subgind = subg_ind.value();
+  // backendmap[subgind] = "cpu";
+  assert(subg_ind.value() == 0);
 
-  for(auto itr = opnamemap.begin(); itr != opnamemap.end(); ++itr){
-    std::cout << itr->first <<" " << itr->second << "\n";
-  }
+  // for(auto itr = opnamemap.begin(); itr != opnamemap.end(); ++itr){
+  //   std::cout << itr->first <<" " << itr->second << "\n";
+  // }
   for(auto itr = optimemap.begin(); itr != optimemap.end(); ++itr){
     std::cout << itr->first <<" " << itr->second << "\n";
+    _json_out->add_simple_record(itr->first, itr->second);
   }
+
+  _json_out->write_and_close_file();
 
 }
 
