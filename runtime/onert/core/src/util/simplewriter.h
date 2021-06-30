@@ -36,9 +36,6 @@ private:
 public:
   JsonWriter(std::string dumpfile);
 
-  int64_t add_timed_record(std::string name, std::string ph);
-  void add_instance_record(std::string name);
-
   void add_simple_record(std::uint32_t op_id, std::int64_t time);
 
   void open_file(void);

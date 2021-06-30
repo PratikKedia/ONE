@@ -26,30 +26,6 @@ JsonWriter::JsonWriter(std::string dumpfile)
 {
 }
 
-int64_t JsonWriter::add_timed_record(std::string name, std::string ph)
-{
-  Json::Value rec;
-  rec["name"] = name;
-  rec["pid"] = 0;
-  rec["tid"] = _dumpfile;
-  rec["ph"] = ph;
-  auto ts_val = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
-  rec["ts"] = ts_val;
-  _root["traceEvents"].append(rec);
-  return ts_val;
-}
-
-void JsonWriter::add_instance_record(std::string name)
-{
-  Json::Value rec;
-  rec["name"] = name;
-  rec["pid"] = 0;
-  rec["tid"] = _dumpfile;
-  rec["ph"] = "i";
-  rec["s"] = "g";
-  rec["ts"] = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
-  _root["traceEvents"].append(rec);
-}
 
 
 void JsonWriter::add_simple_record(std::uint32_t op_id, std::int64_t time)
