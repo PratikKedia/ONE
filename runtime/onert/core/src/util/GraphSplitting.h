@@ -49,6 +49,8 @@ public:
   void initial_partition(int);
   std::pair<int, std::vector<std::pair<int,int>>> get_bottleneck_info(int);
   bool partition_move(int, int, int);
+  void partition_minmax(int);
+  void partition_minmax_multiple(int, int);
 
   // void handleJobEnd(IExecutor *, ir::SubgraphIndex, ir::OperationIndex,
   //                   const backend::Backend *) override;

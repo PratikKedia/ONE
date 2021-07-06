@@ -1,0 +1,8 @@
+{
+  "major-version" : "1",
+  "minor-version" : "1",
+  "patch-version" : "0",
+  "configs"     : [ "" ],
+  "models"      : [ "inception_v3.tflite" ],
+  "model-types" : [ "tflite" ]
+}

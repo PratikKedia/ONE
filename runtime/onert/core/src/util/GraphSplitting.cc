@@ -37,6 +37,7 @@ void GraphTopology::topological_sort()
             }
         }
     }
+    std::reverse(top.begin(), top.end());
     _top_sort = top;
     // for(auto i : top){
     //     std::cout << i << " ";
@@ -47,12 +48,12 @@ void GraphTopology::topological_sort()
 
 void GraphTopology::generate_session_graph(int k){
     int n = _top_sort.size();
-    std::vector<std::vector<int>> my_session_graph(n, std::vector<int>(n, 0));
+    std::vector<std::vector<int>> my_session_graph(k, std::vector<int>(k, 0));
     for(int i = 0; i<n-1; i++){
         for (int j = i+1; j < n; j++)
         {
             //FEEEL  PROBLEM
-            //DISCUSS
+            //DISCUSS loop
             int idx1 = -1, idx2 = -1;
             if(_dag[i][j] == 1){
                 int cnt = 0;
@@ -69,12 +70,13 @@ void GraphTopology::generate_session_graph(int k){
                 }
                 if(idx1 == -1 || idx2 == -1) exit(1);
                 if(idx1 != idx2){
-                    _session_graph[idx1][idx2] = 1;
+                    my_session_graph[idx1][idx2] = 1;
                 }
             }
         }
         
     }
+    _session_graph = my_session_graph;
     return;
 }
 
@@ -176,10 +178,12 @@ bool GraphTopology::partition_move(int bot_id, int neighbour, int k){
         s1 = _session_ids[bot_id];
         s2 = _session_ids[neighbour];
 
+        //DISCUSS USE OF THIS
         //SESSION EDGES CODE STARTS
         std::unordered_map<int, std::vector<int>> sdict;
         if(forward_direction){
-            std::sort(s1.begin(), s1.end());
+            // std::sort(s1.begin(), s1.end());
+            std::sort(s2.begin(), s2.end()); //NEW INCLUDED
             for(auto t: s1){
                 std::vector<int> tvec, tmp_s;
                 for(int i = 0; i<n; i++){
@@ -187,14 +191,16 @@ bool GraphTopology::partition_move(int bot_id, int neighbour, int k){
                         tvec.push_back(i);
                     }
                 }
-                std::set_difference(tvec.begin(), tvec.end(), s1.begin(), s1.end(), tmp_s.begin());
+                //CHANGE: Include intersection
+                // std::set_difference(tvec.begin(), tvec.end(), s1.begin(), s1.end(), tmp_s.begin());
+                std::set_intersection(tvec.begin(), tvec.end(), s2.begin(), s2.end(), tmp_s.begin());
                 if(tmp_s.size() > 0){
                     sdict[t] = tmp_s;
                 }
             }
         }
         else{
-            std::sort(s2.begin(), s2.end());
+            std::sort(s1.begin(), s1.end());
             for(auto t: s2){
                 std::vector<int> tvec, tmp_s;
                 for(int i = 0; i<n; i++){
@@ -202,25 +208,30 @@ bool GraphTopology::partition_move(int bot_id, int neighbour, int k){
                         tvec.push_back(i);
                     }
                 }
-                std::set_intersection(tvec.begin(), tvec.end(), s2.begin(), s2.end(), tmp_s.begin());
+                std::set_intersection(tvec.begin(), tvec.end(), s1.begin(), s1.end(), tmp_s.begin());
                 if(tmp_s.size() > 0){
+                    //PROBLEMATIC _ CHECK
                     for(auto key: tmp_s)
                         sdict[key] = {t};
                 }
             }
         }
         //SESSION EDGES CODE ENDS
-        std::unordered_map<int, bool> marked;
+        //DISCUSS - NEED FOR MARKED
+        // std::unordered_map<int, bool> marked;
         found_node = false;
         cnt = 0;
         auto itr = sdict.begin();
+
+        //DISCUSS - INCLUDE RANDOMNESS
+
         while(!found_node && cnt < sdict.size()){
             int rnd_key = itr->first;
-            marked[rnd_key] = true;
+            // marked[rnd_key] = true;
             found_node = true;
             if(forward_direction){
-                //CHANGE RANGE TO SESSION1 to SESSION2
-                for(int i = 0; i<neighbour; i++){
+                //CHANGED RANGE TO SESSION1 to SESSION2
+                for(int i = bot_id; i<neighbour; i++){
                     std::vector<int> tvec, tmp_s;
                     for(int j = 0; j<n; j++){
                         if(_dag[rnd_key][j]==1){
@@ -228,17 +239,17 @@ bool GraphTopology::partition_move(int bot_id, int neighbour, int k){
                         }
                     }
                     std::sort(_session_ids[i].begin(), _session_ids[i].end());
-                    std::set_difference(tvec.begin(), tvec.end(), _session_ids[i].begin(), _session_ids[i].end(), tmp_s.begin());
+                    std::set_intersection(tvec.begin(), tvec.end(), _session_ids[i].begin(), _session_ids[i].end(), tmp_s.begin());
                     if(tmp_s.size() > 0){
                         found_node = false;
-                        cnt++;
+                        cnt++; itr++;
                         break;
                     }
                 }
             }
             else{
-                //CHANGE RANGE TO SESSION1 to SESSION2
-                for(int i = neighbour+1; i<k; i++){
+                //CHANGED RANGE TO SESSION2 to SESSION1
+                for(int i = neighbour+1; i<=bot_id; i++){
                     std::vector<int> tvec, tmp_s;
                     for(int j = 0; j<n; j++){
                         if(_dag[j][rnd_key]==1){
@@ -246,30 +257,113 @@ bool GraphTopology::partition_move(int bot_id, int neighbour, int k){
                         }
                     }
                     std::sort(_session_ids[i].begin(), _session_ids[i].end());
-                    std::set_difference(tvec.begin(), tvec.end(), _session_ids[i].begin(), _session_ids[i].end(), tmp_s.begin());
+                    std::set_intersection(tvec.begin(), tvec.end(), _session_ids[i].begin(), _session_ids[i].end(), tmp_s.begin());
                     if(tmp_s.size() > 0){
                         found_node = false;
-                        cnt++;
+                        cnt++; itr++;
                         break;
                     }
                 }
             }
 
             if(found_node){
+                cnt++; itr++;
                 int new_maxval = std::max(_session_weights[bot_id] - _weights[rnd_key], _session_weights[neighbour]+ _weights[rnd_key]);
                 if(new_maxval < maxval){
-                    
+                    // if type(sdict[rnd_key]) is list:
+                    //         rnd_val = np.random.choice(sdict[rnd_key])
+                    //     else:
+                    //         rnd_val = sdict[rnd_key]
+                    //     if forward_direction == True:
+                    //         if np.where(s2 == rnd_val)[0].size > 0:
+                    //             s2 = np.insert(s2, np.where(s2 == rnd_val)[0], rnd_key)
+                    //         else:
+                    //             s2 = np.insert(s2, 0, rnd_key)
+                    //     else:
+                    //         if np.where(s2 == sdict[rnd_key])[0].size > 0:
+                    //             s2 = np.insert(s2,
+                    //                            np.where(s2 == sdict[rnd_key])[0] + 1,
+                    //                            rnd_key)
+                    //         else:
+                    //             s2 = np.insert(s2, len(s2), rnd_key)
+                    //DISCUSS: NEED FOR SDICT
+                    s2.push_back(rnd_key);
+                    s1.erase(std::find(s1.begin(), s1.end(), rnd_key));
+                    _session_ids[bot_id] = s1;
+                    _session_ids[neighbour] = s2;
+                    _session_weights[bot_id] -= _weights[rnd_key];
+                    _session_weights[neighbour] += _weights[rnd_key];
+                    maxval = new_maxval;
+                    generate_session_graph(k);
+                    move_success = true;
+
+                }
+                else{
+                    improvement = false;
                 }
             }
-            itr++;
-            
+            else{
+                improvement = false;
+            }
+            // itr++;            
         }
-
-
-
-
-
     }
     
-    return true;
+    return move_success;
+}
+
+void GraphTopology::partition_minmax(int k){
+    bool improvement = true;
+    while(improvement){
+        improvement = false;
+        auto bot_info = get_bottleneck_info(k);
+        int bottleneck_id = bot_info.first;
+        std::vector<std::pair<int, int>> neighbour_list = bot_info.second;
+        for(int i = 0; i< neighbour_list.size(); i++){
+            bool ret_success = partition_move(bottleneck_id, neighbour_list[i].first, k);
+            if(ret_success){
+                improvement = true;
+                break;
+            }
+        }
+    }
+    return;
+}
+
+void GraphTopology::partition_minmax_multiple(int k, int nruns){
+    int minval = INT_MAX;
+    std::vector<std::vector<int>> my_session_ids;
+    std::vector<int> my_session_weights;
+    for (int i = 0; i < nruns; i++)
+    {
+        topological_sort();
+        initial_partition(k);
+        partition_minmax(k);
+        int maxval = *std::max_element(_session_weights.begin(), _session_weights.end());
+        if(maxval < minval){
+            minval = maxval;
+            std::cout << minval << "\n";
+            my_session_ids = _session_ids;
+            my_session_weights = _session_weights;
+        }
+    }
+    
+    std::vector<int> partition_map(_top_sort.size(), 0);
+    for(int i =0; i<k; i++){
+        for(int op_idx: my_session_ids[i]){
+            partition_map[op_idx] = i;
+        }
+    }
+
+    for(int i:partition_map){
+        std::cout << i << " "; 
+    }
+    std::cout << "\n";
+    for(int i:my_session_weights){
+        std::cout << i << " ";
+    }
+    std::cout << "\n";
+
+
+    
 }
