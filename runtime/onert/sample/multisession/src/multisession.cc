@@ -16,11 +16,20 @@
 
 #include "nnfw.h"
 #include "nnfw_experimental.h"
+#include "../../../../contrib/model_partition/GraphSplitting.h"
 #include <vector>
 #include <iostream>
 #include <thread>
 #include <pthread.h>
 #include <unistd.h>
+#include <time.h>
+#include <chrono>
+
+clock_t begin_time, end_time;
+
+std::chrono::_V2::system_clock::time_point t_start, t_end, t_mid, t_mid2;
+// the work...
+// auto t_end = std::chrono::high_resolution_clock::now();
 
 uint64_t num_elems(const nnfw_tensorinfo *ti)
 {
@@ -35,24 +44,35 @@ uint64_t num_elems(const nnfw_tensorinfo *ti)
 void* prodfun(void* session){
   std::vector<void *> inputs;
   std::vector<uint32_t> lengths;
-  int N = 100;
-
+  int N = 10;
+  // std::cout <<"Here2\n";
   float *temp = (float *)malloc(299 * 299 * 3 * sizeof(float));
+
+  for(int cnt = 0; cnt< 299 * 299 * 3 ; cnt++){
+    temp[cnt] = (rand()/(double)RAND_MAX);
+  }
+
   inputs.push_back((void *)temp);
   lengths.push_back(299 * 299 * 3 * sizeof(float));
-  //GENERATE RANDOM CODE 
+
+  // for(int i = 0; i<299; i++){
+  //   std::cout << ((float *)inputs[0])[i] << " ";
+  // }
+  begin_time = clock();
+  t_start = std::chrono::high_resolution_clock::now();
 
   for (int i = 1; i <= N; i++) {
       nnfw_push_pipeline_input((nnfw_session *)session, (void *)&inputs, (void *)&lengths);
       printf("%dth push_pipeline\n", i);
       usleep(10000);
   }
-
+  std::cout << float(clock() - begin_time)/CLOCKS_PER_SEC << std::endl;
+  t_mid = std::chrono::high_resolution_clock::now();
   free(inputs[0]);
   inputs.clear();
   lengths.clear();
   nnfw_push_pipeline_input((nnfw_session *)session, (void *)&inputs, (void *)&lengths); // empty input
- 
+  return NULL;
 }
 
 
@@ -62,11 +82,17 @@ void* confun(void* session){
   while ((nnfw_pop_pipeline_output((nnfw_session *)session, (void *)&outputs) == NNFW_STATUS_NO_ERROR))
   {
     printf("%dth pop pipeline\n", ++cnt);
+    t_mid2 = std::chrono::high_resolution_clock::now();
+    std::cout << std::chrono::duration<double, std::milli>(t_mid2-t_mid).count() << std::endl;
+    t_mid = t_mid2;
     for (uint32_t i = 0; i < outputs.size(); i++) {
     free(outputs[i]);
     }
     outputs.clear();
   }
+  t_end = std::chrono::high_resolution_clock::now();
+  end_time = clock();
+  return NULL;
 }
 
 
@@ -78,17 +104,13 @@ int main(const int argc, char **argv)
 
   nnfw_create_session(&session);
 
-  // Loading nnpackage
   nnfw_load_model_from_file(session, argv[1]);
-
-  // Use acl_neon backend for CONV_2D and acl_cl for otherwise.
-  // Note that defalut backend is acl_cl
-  //nnfw_set_op_backend(session, "CONV_2D", "cpu");
 
   nnfw_set_available_backends(session, "cpu");
 
   // Compile model
-  nnfw_prepare_pipeline(session, "inception_v3/partition_map.json");
+  // nnfw_prepare_pipeline(session, "inception_v3/partition_map.json");
+  nnfw_prepare_pipeline(session, "/home/pratik/Desktop/Samsung/ONE/inception_v3/parition_map.json");  
 
   pthread_create(&producer, NULL, &prodfun, (void *)session);
 
@@ -96,9 +118,12 @@ int main(const int argc, char **argv)
  
   pthread_join(consumer, NULL);
   pthread_join(producer, NULL);
-  
-  pthread_exit(NULL);
 
+  double elapsed_time_ms = std::chrono::duration<double, std::milli>(t_end-t_start).count();
+  
+  std::cout << float(end_time - begin_time)/CLOCKS_PER_SEC << std::endl;
+  
+  std::cout << elapsed_time_ms << std::endl;
   // TODO: Please print or compare the output value in your way.
 
   nnfw_close_session(session);
