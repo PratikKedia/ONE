@@ -38,6 +38,7 @@ option(BUILD_BENCHMARK_ACL "Build ARM Compute Library Benchmarks" OFF)
 option(BUILD_DETECTION_APP "Build detection example app" OFF)
 option(BUILD_HEAP_TRACE "Build heap trace tool" OFF)
 option(BUILD_LABS "Build lab projects" OFF)
+option(BUILD_MODEL_PARTITION_TOOL "Build model partitioning" OFF)
 option(BUILD_STYLE_TRANSFER_APP "Build style transfer app" OFF)
 option(BUILD_TFLITE_TEST "Build tensorflow lite test" OFF)
 option(BUILD_TFLITE_CLASSIFY_APP "Build tflite_classify app" OFF)
@@ -90,3 +91,4 @@ option(BUILD_FXDIV "Build fxdiv library from the source" ON)
 ## Default sample build configuration
 #
 option(BUILD_MINIMAL_SAMPLE "Build minimal app" OFF)
+option(BUILD_MULTISESSION_SAMPLE "Build multisession app" OFF)

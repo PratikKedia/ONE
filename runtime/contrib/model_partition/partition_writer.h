@@ -17,13 +17,14 @@
  * @file  tracer.h
  * @brief This file describes API for dumping profiling in Simple format
  */
+
 #include <fstream>
-#include "../../../../runtime/3rdparty/jsoncpp/json/json.h"
 // #include <jsoncpp/json/json.h>
+#include "../../3rdparty/jsoncpp/json/json.h"
 #include <memory>
 
 #define TRACE_INTERVAL 10
-class JsonWriter
+class JsonReadWrite
 {
 private:
   Json::StreamWriterBuilder _stream;
@@ -33,9 +34,13 @@ private:
   std::unique_ptr<Json::StreamWriter> _writer;
 
 public:
-  JsonWriter(std::string dumpfile);
+  JsonReadWrite(std::string dumpfile);
 
   void add_simple_record(std::uint32_t op_id, std::int64_t time);
+  void add_partition_record(std::vector<int>, int);
+
+  std::vector<std::vector<int>> read_dag();
+  std::vector<int> read_exectime();
 
   void open_file(void);
   void write_to_file(void);

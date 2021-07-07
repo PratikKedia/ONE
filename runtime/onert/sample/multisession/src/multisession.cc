@@ -28,8 +28,6 @@
 clock_t begin_time, end_time;
 
 std::chrono::_V2::system_clock::time_point t_start, t_end, t_mid, t_mid2;
-// the work...
-// auto t_end = std::chrono::high_resolution_clock::now();
 
 uint64_t num_elems(const nnfw_tensorinfo *ti)
 {
@@ -109,8 +107,10 @@ int main(const int argc, char **argv)
   nnfw_set_available_backends(session, "cpu");
 
   // Compile model
-  // nnfw_prepare_pipeline(session, "inception_v3/partition_map.json");
-  nnfw_prepare_pipeline(session, "/home/pratik/Desktop/Samsung/ONE/inception_v3/parition_map.json");  
+  std::string partitionpath = argv[1];
+  partitionpath = partitionpath +  "/parition_map.json";
+  // nnfw_prepare_pipeline(session, "./inception_v3/partition_map.json");
+  nnfw_prepare_pipeline(session, partitionpath.c_str());  
 
   pthread_create(&producer, NULL, &prodfun, (void *)session);
 
